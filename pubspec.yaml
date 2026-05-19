@@ -87,3 +87,20 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local AI Model for Text Translation (Edge Computing)
+  google_mlkit_translation: ^0.11.0
+  
+  # On-device Speech Processing (Voice-to-Text)
+  speech_to_text: ^6.6.0
+  
+  # Text-to-Speech Engine for Verbal Communication Output
+  flutter_tts: ^4.1.0
+  
+  # High-performance NoSQL Database for Local Storage
+  hive_flutter: ^1.1.0
