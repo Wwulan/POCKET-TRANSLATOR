@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../controllers/translation_controller.dart';
+import '../controllers/speech_controller.dart';
 
 class MainTranslationScreen extends StatefulWidget {
   const MainTranslationScreen({super.key});
@@ -10,36 +11,59 @@ class MainTranslationScreen extends StatefulWidget {
 
 class _MainTranslationScreenState extends State<MainTranslationScreen> {
   final TranslationController _translationController = TranslationController();
+  final SpeechController _speechController = SpeechController();
   final TextEditingController _inputController = TextEditingController();
   
   String _translatedOutput = "Translation output will appear here...";
   bool _isEngineReady = false;
   bool _isProcessing = false;
+  bool _isListening = false;
+
+  // Curated elite list of vendor-specific transactional statements
+  final List<String> _quickPhrases = [
+    "Harganya dua puluh ribu rupiah.",
+    "Mau dibungkus atau makan di sini?",
+    "Maaf, makanan ini tidak menggunakan daging babi.",
+    "Tunggu sebentar ya, sedang saya siapkan.",
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initializeTranslationEngine();
+    _initializeCoreEngines();
   }
 
-  /// Asynchronously downloads and registers the local ML models on boot
-  Future<void> _initializeTranslationEngine() async {
-    bool ready = await _translationController.downloadOfflineModels();
+  Future<void> _initializeCoreEngines() async {
+    bool mlReady = await _translationController.downloadOfflineModels();
+    bool speechReady = await _speechController.initializeSpeechEngine();
+    
     setState(() {
-      _isEngineReady = ready;
+      _isEngineReady = mlReady && speechReady;
     });
   }
 
-  /// Triggers the edge-ai translation processing logic
+  void _toggleVocalCapture() {
+    if (_speechController.isCurrentlyListening) {
+      _speechController.stopListeningStream();
+      setState(() => _isListening = false);
+    } else {
+      setState(() => _isListening = true);
+      _speechController.startListeningStream(
+        onResultCallback: (recognizedWords) {
+          setState(() {
+            _inputController.text = recognizedWords;
+            _isListening = _speechController.isCurrentlyListening;
+          });
+        },
+      );
+    }
+  }
+
   Future<void> _handleTranslation() async {
     if (!_isEngineReady || _inputController.text.isEmpty) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
-
+    setState(() => _isProcessing = true);
     String result = await _translationController.translateText(_inputController.text);
-
     setState(() {
       _translatedOutput = result;
       _isProcessing = false;
@@ -61,6 +85,7 @@ class _MainTranslationScreenState extends State<MainTranslationScreen> {
         title: const Text('KakiLima Voice Terminal'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
+        elevation: 2,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -77,32 +102,40 @@ class _MainTranslationScreenState extends State<MainTranslationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Input Card (Indonesian Local Vendor Speech Input)
+                // Input Field Card with Speech Mic overlay
                 Card(
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
-                    child: TextField(
-                      controller: _inputController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        hintText: "Enter Indonesian text or tap mic...",
-                        border: InputBorder.none,
-                      ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _inputController,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            hintText: "Type or use microphone for vocal input...",
+                            border: InputBorder.none,
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.bottomRight,
+                          child: FloatingActionButton.small(
+                            onPressed: _toggleVocalCapture,
+                            backgroundColor: _isListening ? Colors.red : Colors.teal,
+                            foregroundColor: Colors.white,
+                            child: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                          ),
+                        )
+                      ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 
-                // Action Translation Action Button
                 ElevatedButton.icon(
                   onPressed: _isProcessing ? null : _handleTranslation,
                   icon: _isProcessing 
-                    ? const SizedBox(
-                        width: 20, 
-                        height: 20, 
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
-                      )
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.translate),
                   label: Text(_isProcessing ? "Processing Data..." : "Translate to English"),
                   style: ElevatedButton.styleFrom(
@@ -113,22 +146,42 @@ class _MainTranslationScreenState extends State<MainTranslationScreen> {
                 ),
                 const SizedBox(height: 16),
                 
-                // Output Card (Processed English Target Model Output)
-                Expanded(
-                  child: Card(
-                    color: Colors.teal[50],
-                    elevation: 1,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        _translatedOutput,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.teal[900],
-                        ),
-                      ),
+                // Processed Output Card
+                Card(
+                  color: Colors.teal[50],
+                  elevation: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _translatedOutput,
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Colors.teal[900]),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Quick Phrases Panel Section
+                const Text(
+                  "Quick Corporate Vendor Phrases:",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _quickPhrases.length,
+                    itemBuilder: (context, index) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          title: Text(_quickPhrases[index], style: const TextStyle(fontSize: 13)),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.teal),
+                          onTap: () {
+                            _inputController.text = _quickPhrases[index];
+                            _handleTranslation();
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -140,7 +193,7 @@ class _MainTranslationScreenState extends State<MainTranslationScreen> {
               children: [
                 CircularProgressIndicator(color: Colors.teal),
                 SizedBox(height: 16),
-                Text("Downloading Offline ML Weights to Device Hardware..."),
+                Text("Syncing Edge AI Engines & Peripherals..."),
               ],
             ),
           ),
