@@ -50,7 +50,7 @@ The repository adheres to a decoupled layered architecture ensuring clean separa
 
 1. Clone the repository into your local production environment:
    ```bash
-   git clone [https://github.com/sunyflo05/Your-Repository-Name.git](https://github.com/sunyflo05/Your-Repository-Name.git)
+   git clone [https://github.com/sunyflo05/Your-Repository-Name.git](https://github.com/Wwulan/POCKET-TRANSLATOR.git)
    cd Your-Repository-Name
 
 2. Fetch pub dependencies:
