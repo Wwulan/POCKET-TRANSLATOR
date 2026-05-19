@@ -1,40 +1,48 @@
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:speech_to_text/speech_to_text.dart';
 
-/// Architectural business controller managing native on-device audio capture and speech-to-text processing.
+/// Business logic controller managing offline localized acoustic speech-to-text streams.
 class SpeechController {
-  final stt.SpeechToText _speechEngine = stt.SpeechToText();
+  final SpeechToText _speechToText = SpeechToText();
+  bool _isInitialized = false;
 
-  /// Initializes the hardware microphone bindings and checks system permissions.
+  /// Validates system audio hardware permissions and boots up the STT subsystem engine.
   Future<bool> initializeSpeechEngine() async {
+    if (_isInitialized) return true;
     try {
-      bool available = await _speechEngine.initialize(
-        onStatus: (status) => print('Speech Engine Telemetry Status: $status'),
-        onError: (errorNotification) => print('Speech Engine Telemetry Error: $errorNotification'),
+      _isInitialized = await _speechToText.initialize(
+        onError: (errorNotification) => print('Acoustic Stream Error: $errorNotification'),
+        onStatus: (statusNotification) => print('Acoustic Stream Status: $statusNotification'),
       );
-      return available;
+      return _isInitialized;
     } catch (e) {
-      print('Speech Engine Critical Exception: $e');
+      print('Speech Recognition Engine Lifecycle Failure: $e');
       return false;
     }
   }
 
-  /// Begins listening to the microphone stream and captures Indonesian vocal inputs.
+  /// Evaluates whether the device microphone channel is actively capturing data stream at runtime.
+  bool get isCurrentlyListening => _speechToText.isListening;
+
+  /// Starts streaming acoustic data and parses it based on the specified runtime locale.
   void startListeningStream({
     required Function(String) onResultCallback,
-  }) async {
-    await _speechEngine.listen(
-      localeId: 'id_ID', // Hardcoded to Indonesian language mapping for local micro-vendors
+    String localeId = 'id_ID',
+  }) {
+    // Ensuring the system doesn't trigger operations on an uninitialized infrastructure
+    if (!_isInitialized) return;
+
+    _speechToText.listen(
+      localeId: localeId,
       onResult: (result) {
-        onResultCallback(result.recognizedWords);
+        if (result.recognizedWords.isNotEmpty) {
+          onResultCallback(result.recognizedWords);
+        }
       },
     );
   }
 
-  /// Terminates the current audio capturing stream safely.
-  void stopListeningStream() async {
-    await _speechEngine.stop();
+  /// Terminates the ongoing vocal audio capture stream session instantly.
+  void stopListeningStream() {
+    _speechToText.stop();
   }
-
-  /// Evaluates if the device microphone is actively capturing audio packets.
-  bool get isCurrentlyListening => _speechEngine.isListening;
 }

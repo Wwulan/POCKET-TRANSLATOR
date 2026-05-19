@@ -1,49 +1,70 @@
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 
-/// Business logic controller handling Edge AI machine learning translation models.
+/// Business logic controller handling dynamic multi-language offline edge AI translation operations.
 class TranslationController {
-  // Initialize the translation engine from Indonesian to English
-  final _onDeviceTranslator = OnDeviceTranslator(
-    sourceLanguage: TranslateLanguage.indonesian,
-    targetLanguage: TranslateLanguage.english,
-  );
+  OnDeviceTranslator? _onDeviceTranslator;
+  final OnDeviceTranslatorModelManager _modelManager = OnDeviceTranslatorModelManager();
 
-  final _modelManager = OnDeviceTranslatorModelManager();
+  /// Supported application languages mapped from ISO codes to ML Kit TranslateLanguage enums.
+  final Map<String, TranslateLanguage> _languageMapping = {
+    'id': TranslateLanguage.indonesian,
+    'en': TranslateLanguage.english,
+    'ja': TranslateLanguage.japanese,
+  };
 
-  /// Downloads the language packages locally to enable 100% offline functionality.
+  /// Downloads all required core language packs (ID, EN, JA) onto the device local storage.
   Future<bool> downloadOfflineModels() async {
     try {
-      // Check if Indonesian and English models are downloaded on the hardware
-      final bool isIdDownloaded = await _modelManager.isModelDownloaded(TranslateLanguage.indonesian.bcp47Code);
-      final bool isEnDownloaded = await _modelManager.isModelDownloaded(TranslateLanguage.english.bcp47Code);
+      // 1. Verify and download Indonesian model dependency ('id')
+      bool isIndoDownloaded = await _modelManager.isModelDownloaded('id');
+      if (!isIndoDownloaded) await _modelManager.downloadModel('id');
 
-      if (!isIdDownloaded) {
-        await _modelManager.downloadModel(TranslateLanguage.indonesian.bcp47Code);
-      }
-      if (!isEnDownloaded) {
-        await _modelManager.downloadModel(TranslateLanguage.english.bcp47Code);
-      }
+      // 2. Verify and download English model dependency ('en')
+      bool isEnglishDownloaded = await _modelManager.isModelDownloaded('en');
+      if (!isEnglishDownloaded) await _modelManager.downloadModel('en');
+
+      // 3. Verify and download Japanese model dependency ('ja')
+      bool isJapaneseDownloaded = await _modelManager.isModelDownloaded('ja');
+      if (!isJapaneseDownloaded) await _modelManager.downloadModel('ja');
+
       return true;
     } catch (e) {
-      // System telemetry log for debugging purposes
-      print('Telemetry Error: Failed to initialize offline ML weights: $e');
+      print('Edge Translation Engine Initialization Failed: $e');
       return false;
     }
   }
 
-  /// Processes text translation locally on the device's operational memory.
-  Future<String> translateText(String inputText) async {
-    if (inputText.trim().isEmpty) return '';
+  /// Instantiates a dynamic translator instance based on runtime source and target selections.
+  void _setupDynamicTranslator(String sourceCode, String targetCode) {
+    _onDeviceTranslator?.close(); // Prevent system memory leaks by closing previous session
+    
+    _onDeviceTranslator = OnDeviceTranslator(
+      sourceLanguage: _languageMapping[sourceCode] ?? TranslateLanguage.indonesian,
+      targetLanguage: _languageMapping[targetCode] ?? TranslateLanguage.english,
+    );
+  }
+
+  /// Translates input text across specified language vectors entirely offline.
+  Future<String> translateText({
+    required String text,
+    required String sourceLang,
+    required String targetLang,
+  }) async {
+    if (text.trim().isEmpty) return "";
+    
     try {
-      final translationResult = await _onDeviceTranslator.translateText(inputText);
-      return translationResult;
+      // Initialize the precise runtime translation matrix
+      _setupDynamicTranslator(sourceLang, targetLang);
+      
+      final String translation = await _onDeviceTranslator!.translateText(text);
+      return translation;
     } catch (e) {
-      return 'Translation Engine Exception: ${e.toString()}';
+      return "Translation Error: ${e.toString()}";
     }
   }
 
-  /// Dispose resource bindings to prevent memory leaks in production environment
+  /// Safely closes the translation streaming channel to prevent system resource leaks.
   void closeRegistry() {
-    _onDeviceTranslator.close();
+    _onDeviceTranslator?.close();
   }
 }

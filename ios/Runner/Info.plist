@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+    <string>This application requires low-level microphone access to capture real-time local vendor vocal inputs for speech-to-text translation metrics.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>This application utilizes on-device edge AI speech recognition engines to convert vendor spoken dialects into text streams.</string>
 </dict>
 </plist>
