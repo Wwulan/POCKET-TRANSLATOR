@@ -46,26 +46,4 @@ The repository adheres to a decoupled layered architecture ensuring clean separa
 * CocoaPods dependency manager (for iOS deployments).
 * Physical iOS/Android device or Emulator/Simulator.
 
-### Installation Sequence
-
-1. Clone the repository into your local production environment:
-   ```bash
-   git clone [https://github.com/Wwulan/POCKET-TRANSLATOR.git](https://github.com/Wwulan/POCKET-TRANSLATOR.git)
-   cd POCKET-TRANSLATOR
-
-2. Fetch pub dependencies:
-   ```bash
-   flutter pub get
-
-3. Initialize native iOS dependencies (if developing on macOS for iOS targets):
-   ```bash
-    cd ios
-    pod install
-    cd ..
-
-4. Compile and launch the application on the active subsystem device:
-   ```bash
-   flutter run
-
-## Production Execution Notes
-Upon the initial boot sequence, the engine will automatically run a background evaluation script to download and structure the offline neural dictionaries ('id', 'en', and 'ja'). This synchronous onboarding process occurs exactly once. Subsequent initializations boot instantly with zero data footprint required.
+Created By Sri Wulandari 
